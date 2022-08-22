@@ -1,6 +1,9 @@
+from audioop import reverse
+from urllib import request
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
-from .models import Question
+from django.urls import reverse
+from django.http import HttpResponse, HttpResponseRedirect
+from .models import Question, Choice
 
 
 def index(request):
@@ -17,9 +20,23 @@ def detail(request, question_id):
     })
 
 
-def results(results, question_id):
-    return HttpResponse(f"This is {question_id} results")
+def results(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    return render(request, "polls/results.html", {
+        "question": question
+    })
 
 
-def vote(results, question_id):
-    return HttpResponse(f"You are voting {question_id}")
+def vote(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    try: 
+        selected_choice = question.choice_set.get(pk=request.POST["choice"])
+    except(KeyError, Choice.DoesNotExist):
+        return render(request, "polls/detail.html", {
+            "question": question,
+            "error_message": "No elegiste una respuesta"
+        })
+    else:
+        selected_choice.votes += 1
+        selected_choice.save()
+        return HttpResponseRedirect(reverse("polls:results", args=(question.id,)))
